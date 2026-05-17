@@ -121,7 +121,7 @@ function AllVehicles() {
 
   const rows = allVehicles
     .filter(
-      (vehicle) => vehicle.isDeleted === "false" && vehicle.isAdminApproved
+      (vehicle) => vehicle.isDeleted === false && vehicle.isAdminApproved
     )
     .map((vehicle) => ({
       id: vehicle._id,

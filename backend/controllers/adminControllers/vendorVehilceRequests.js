@@ -8,7 +8,7 @@ export const fetchVendorVehilceRequests = async (req, res, next) => {
       {
         $match: {
           isAdminApproved: false,
-          isDeleted: "false",
+          isDeleted: false,
           isRejected: false,
           isAdminAdded: false,
         },

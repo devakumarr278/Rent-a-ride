@@ -194,3 +194,31 @@ export const searchCar = async (req, res, next) => {
     next(errorHandler(500, "something went wrong while Searching car"));
   }
 };
+
+// Get all available vehicle locations and districts
+export const getAvailableLocations = async (req, res, next) => {
+  try {
+    const vehicles = await vehicle.find({ isDeleted: false }).select("location district");
+
+    // Get unique locations and districts
+    const locations = [...new Set(vehicles.map(v => v.location))].filter(Boolean);
+    const districts = [...new Set(vehicles.map(v => v.district))].filter(Boolean);
+
+    // Group locations by district
+    const locationsByDistrict = {};
+    districts.forEach(district => {
+      locationsByDistrict[district] = [...new Set(
+        vehicles.filter(v => v.district === district).map(v => v.location)
+      )].filter(Boolean);
+    });
+
+    res.status(200).json({
+      locations,
+      districts,
+      locationsByDistrict
+    });
+  } catch (error) {
+    console.log(error);
+    next(errorHandler(500, "Error fetching available locations"));
+  }
+};

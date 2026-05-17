@@ -162,7 +162,7 @@ const VenderVehicleRequests = () => {
   const rows =
   adminVenodrRequest && 
     adminVenodrRequest
-      .filter((vehicle) => vehicle.isDeleted === "false")
+      .filter((vehicle) => vehicle.isDeleted === false)
       .map((vehicle) => ({
         id: vehicle._id,
         image: vehicle.image[0],

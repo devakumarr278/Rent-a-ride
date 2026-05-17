@@ -34,10 +34,19 @@ const VendorAllVehicles = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const refreshToken = localStorage.getItem("refreshToken") || "";
+        const accessToken = localStorage.getItem("accessToken") || "";
+
+        // Validate tokens exist
+        if (!refreshToken || !accessToken) {
+          console.warn("Warning: tokens missing. Request may fail. Please sign in.");
+        }
+
         const res = await fetch("/api/vendor/showVendorVehilces", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${refreshToken},${accessToken}`,
           },
           body: JSON.stringify({
             _id,
@@ -139,7 +148,7 @@ const VendorAllVehicles = () => {
   const rows =
     vendorVehilces &&
     vendorVehilces
-      .filter((vehicle) => vehicle.isDeleted === "false")
+      .filter((vehicle) => vehicle.isDeleted === false)
       .map((vehicle) => ({
         id: vehicle._id,
         image: vehicle.image[0],

@@ -11,6 +11,7 @@ import { MenuItem } from "@mui/material";
 
 //reducers
 import { setAvailableCars, setLocationsOfDistrict, setSelectedDistrict } from "../../redux/user/selectRideSlice";
+import { districtOptions, locationsByDistrict } from "../../constants/locationOptions";
 
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -66,35 +67,30 @@ const CarSearch = () => {
   });
 
   const navigate = useNavigate();
-  const { districtData } = useSelector((state) => state.modelDataSlice);
-  const { fetchLov, isLoading } = useFetchLocationsLov();
-  const uniqueDistrict = districtData?.filter((cur, idx) => {
-    return cur !== districtData[idx + 1];
-  });
-  const { selectedDistrict, wholeData, locationsOfDistrict } = useSelector((state) => state.selectRideSlice);
+  const { fetchLov } = useFetchLocationsLov();
+  const { selectedDistrict } = useSelector((state) => state.selectRideSlice);
 
   const [pickup, setPickup] = useState(null);
   const [error, setError] = useState(null);
+  const [selectedLocations, setSelectedLocations] = useState([]);
 
   const dispatch = useDispatch();
 
-  //useEffect to fetch data from backend for locations
+  //useEffect to fetch actual vehicle locations from backend
   useEffect(() => {
-    // fetchModelData(dispatch);
     fetchLov();
-  }, []);
+  }, [fetchLov]);
 
-  //for showing appropriate locations according to districts
+  // for showing appropriate locations according to selected district
   useEffect(() => {
-    if (selectedDistrict !== null) {
-      const showLocationInDistrict = wholeData
-        .filter((cur) => {
-          return cur.district === selectedDistrict;
-        })
-        .map((cur) => cur.location);
-      dispatch(setLocationsOfDistrict(showLocationInDistrict));
+    if (selectedDistrict && locationsByDistrict[selectedDistrict]) {
+      setSelectedLocations(locationsByDistrict[selectedDistrict]);
+      dispatch(setLocationsOfDistrict(locationsByDistrict[selectedDistrict]));
+    } else {
+      setSelectedLocations([]);
+      dispatch(setLocationsOfDistrict([]));
     }
-  }, [selectedDistrict]);
+  }, [selectedDistrict, dispatch]);
 
   //search cars
   const hanldeData = async (data) => {
@@ -202,13 +198,8 @@ const CarSearch = () => {
                             dispatch(setSelectedDistrict(e.target.value));
                           }}
                         >
-                          {isLoading == true && (
-                            <MenuItem value="">
-                              <span className="animate-pulse">Loading</span> <span className="animate-pulse">...</span>
-                            </MenuItem>
-                          )}
-                          {!isLoading && <MenuItem value="">Select a Place</MenuItem>}
-                          {uniqueDistrict?.map((cur, idx) => (
+                          <MenuItem value="">Select a District</MenuItem>
+                          {districtOptions.map((cur, idx) => (
                             <MenuItem value={cur} key={idx}>
                               {cur}
                             </MenuItem>
@@ -237,17 +228,12 @@ const CarSearch = () => {
                           onChange={(e) => field.onChange(e.target.value)}
                           error={Boolean(errors.pickup_location)}
                         >
-                          {isLoading && (
-                            <MenuItem value="">
-                              <span className="animate-pulse">Loading</span> <span className="animate-pulse">...</span>
-                            </MenuItem>
-                          )}
-                          {!isLoading && <MenuItem value="">Select a specific location</MenuItem>}
-                          {/* conditionaly rendering options based on district selected or not */}
-                          {locationsOfDistrict &&
-                            locationsOfDistrict.map((availableLocations, idx) => (
-                              <MenuItem value={availableLocations} key={idx}>
-                                {availableLocations}
+                          <MenuItem value="">Select a location</MenuItem>
+                          {/* conditionally rendering options based on district selected */}
+                          {selectedLocations &&
+                            selectedLocations.map((location, idx) => (
+                              <MenuItem value={location} key={idx}>
+                                {location}
                               </MenuItem>
                             ))}
                         </TextField>
@@ -272,20 +258,15 @@ const CarSearch = () => {
                           error={Boolean(errors.dropoff_location)}
                           id="dropoff_location"
                           className="md:mb-10 capitalize"
-                          placeholder={"pick up location"}
+                          placeholder={"drop-off location"}
                           onChange={(e) => field.onChange(e.target.value)}
                         >
-                          {isLoading && (
-                            <MenuItem value="">
-                              <span className="animate-pulse">Loading</span> <span className="animate-pulse">...</span>
-                            </MenuItem>
-                          )}
-                          {isLoading && <MenuItem value="">Select a specific location</MenuItem>}
-                          {/* conditionaly rendering options based on district selected or not */}
-                          {locationsOfDistrict &&
-                            locationsOfDistrict.map((availableLocations, idx) => (
-                              <MenuItem value={availableLocations} key={idx}>
-                                {availableLocations}
+                          <MenuItem value="">Select a location</MenuItem>
+                          {/* conditionally rendering options based on district selected */}
+                          {selectedLocations &&
+                            selectedLocations.map((location, idx) => (
+                              <MenuItem value={location} key={idx}>
+                                {location}
                               </MenuItem>
                             ))}
                         </TextField>

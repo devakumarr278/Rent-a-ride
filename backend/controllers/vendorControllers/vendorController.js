@@ -28,24 +28,39 @@ export const vendorSignin = async (req, res, next) => {
   try {
     const validVendor = await User.findOne({ email }).lean();
     if (!validVendor || !validVendor.isVendor) {
-      return next(errorHandler(404,"user not found"))
+      return next(errorHandler(404, "user not found"));
     }
     const validPassword = bcryptjs.compareSync(password, validVendor.password);
     if (!validPassword) {
-      return next(errorHandler(404,"wrong credentials"));
+      return next(errorHandler(404, "wrong credentials"));
     }
-   
-    const token = Jwt.sign({ id: validVendor._id }, process.env.ACCESS_TOKEN);
+
+    const accessToken = Jwt.sign({ id: validVendor._id }, process.env.ACCESS_TOKEN, {
+      expiresIn: "15m",
+    });
+    const refreshToken = Jwt.sign(
+      { id: validVendor._id },
+      process.env.REFRESH_TOKEN,
+      { expiresIn: "7d" }
+    );
+
+    await User.findByIdAndUpdate(validVendor._id, { refreshToken });
+
     const { password: hadshedPassword, ...rest } = validVendor;
     const thirtyDaysInMilliseconds = 30 * 24 * 60 * 60 * 1000;
 
     res
-      .cookie("access_token", token, {
+      .cookie("access_token", accessToken, {
         httpOnly: true,
         maxAge: thirtyDaysInMilliseconds,
       })
       .status(200)
-      .json(rest);
+      .json({
+        ...rest,
+        accessToken,
+        refreshToken,
+        isVendor: true,
+      });
   } catch (error) {
     next(error);
   }

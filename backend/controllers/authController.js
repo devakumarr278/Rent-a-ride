@@ -146,9 +146,7 @@ export const signIn = async (req, res, next) => {
     // })
     // 7 days
 
-    res.status(200).json(responsePayload);
-
-    next();
+    return res.status(200).json(responsePayload);
   } catch (error) {
     next(error);
     console.log(error);

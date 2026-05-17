@@ -121,7 +121,7 @@ const vehicleSchema = new mongoose.Schema({
     type: String,
   },
   isDeleted:{
-    type:String,
+    type:Boolean,
     default:false,
     required:false
   },

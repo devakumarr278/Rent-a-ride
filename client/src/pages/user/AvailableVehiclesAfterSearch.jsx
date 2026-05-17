@@ -63,7 +63,7 @@ const AvailableVehiclesAfterSearch = () => {
         {availableCars &&
           availableCars.map(
             (cur, idx) =>
-              cur.isDeleted === "false" && (
+              cur.isDeleted === false && (
                 <div
                   className="bg-white box-shadow rounded-lg  drop-shadow "
                   key={idx}

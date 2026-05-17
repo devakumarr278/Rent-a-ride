@@ -2,7 +2,7 @@ import express from "express";
 
 import { verifyToken } from "../utils/verifyUser.js";
 import { updateUser ,deleteUser , signOut } from "../controllers/userControllers/userController.js";
-import { checkAvailability, listAllVehicles, searchCar, showVehicleDetails } from "../controllers/userControllers/userAllVehiclesController.js";
+import { checkAvailability, listAllVehicles, searchCar, showVehicleDetails, getAvailableLocations } from "../controllers/userControllers/userAllVehiclesController.js";
 import { editUserProfile } from "../controllers/userControllers/userProfileController.js";
 import { BookCar, razorpayOrder, getVehiclesWithoutBooking, filterVehicles, showOneofkind, showAllVariants, findBookingsOfUser, sendBookingDetailsEamil, latestbookings } from "../controllers/userControllers/userBookingController.js";
 
@@ -18,6 +18,7 @@ router.get('/signout',signOut)
 router.get('/listAllVehicles',listAllVehicles)
 router.post('/showVehicleDetails',showVehicleDetails)
 router.post('/editUserProfile/:id',editUserProfile)
+router.get('/getAvailableLocations',getAvailableLocations)
 // router.post('/searchCar',searchCar)
 // router.post('/checkAvailability',checkAvailability)
 router.post('/razorpay',verifyToken,razorpayOrder)

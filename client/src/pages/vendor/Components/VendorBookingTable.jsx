@@ -69,11 +69,18 @@ const VendorBookingsTable = () => {
   // fetching all bookings
   const fetchBookings = async () => {
     try {
-      const res = await fetch("/api/admin/allBookings", {
-        method: "GET",
+      const accessToken = localStorage.getItem("accessToken") || "";
+      const refreshToken = localStorage.getItem("refreshToken") || "";
+      
+      const res = await fetch("/api/vendor/vendorBookings", {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${refreshToken},${accessToken}`,
         },
+        body: JSON.stringify({
+          vendorId: _id,
+        }),
       });
 
       const data = await res.json();
@@ -119,15 +126,12 @@ const VendorBookingsTable = () => {
     fetchBookings();
   }, []);
 
+  // Backend now filters by vendor, so no need to filter on frontend
   useEffect(() => {
-    if (vendorVehicles.length > 0 && bookings.length > 0) {
-      const availableVehicleIds = vendorVehicles.map((vehicle) => vehicle._id);
-      const filtered = bookings.filter((booking) =>
-        availableVehicleIds.includes(booking.vehicleId)
-      );
-      setFilteredBookings(filtered);
+    if (bookings && bookings.length > 0) {
+      setFilteredBookings(bookings);
     }
-  }, [vendorVehicles, bookings]);
+  }, [bookings]);
 
   const handleDetailsModal = (cur) => {
     

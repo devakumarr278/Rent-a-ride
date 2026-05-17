@@ -60,6 +60,7 @@ export const razorpayOrder = async (req, res, next) => {
     const { totalPrice, dropoff_location, pickup_district, pickup_location } =
       req.body;
 
+    console.log("razorpayOrder request body:", req.body);
     console.log(totalPrice)
     if (
       !totalPrice ||
@@ -67,25 +68,46 @@ export const razorpayOrder = async (req, res, next) => {
       !pickup_district ||
       !pickup_location
     ) {
-
-      return next(errorHandler(400, "Missing Required Feilds Process Cancelled")) ;
+      return next(errorHandler(400, "Missing Required Feilds Process Cancelled"));
     }
+
+    const razorpayKeyId = process.env.RAZORPAY_KEY_ID;
+    const razorpayKeySecret =
+      process.env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_SECRET;
+
+    if (!razorpayKeyId || !razorpayKeySecret) {
+      return next(
+        errorHandler(500, "Razorpay configuration missing on server")
+      );
+    }
+
+    const numericPrice = Number(totalPrice);
+    if (!numericPrice || numericPrice <= 0) {
+      return next(errorHandler(400, "Invalid totalPrice for Razorpay order"));
+    }
+
     const instance = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_SECRET,
+      key_id: razorpayKeyId,
+      key_secret: razorpayKeySecret,
     });
 
     const options = {
-      amount: totalPrice * 100, // amount in smallest currency unit
+      amount: numericPrice * 100, // amount in smallest currency unit
       currency: "INR",
     };
 
     const order = await instance.orders.create(options);
+    console.log("razorpay order created:", {
+      id: order?.id,
+      amount: order?.amount,
+      currency: order?.currency,
+      status: order?.status,
+    });
 
     if (!order) return res.status(500).send("Some error occured");
     res.status(200).json(order);
   } catch (error) {
-    console.log(error);
+    console.log("razorpayOrder error:", error);
     next(errorHandler(500, "error occured in razorpayorder"));
   }
 };
@@ -97,6 +119,14 @@ export const getVehiclesWithoutBooking = async (req, res, next) => {
   try {
     const { pickUpDistrict, pickUpLocation, pickupDate, dropOffDate, model } =
       req.body;
+
+    console.log("getVehiclesWithoutBooking - search params:", {
+      pickUpDistrict,
+      pickUpLocation,
+      pickupDate,
+      dropOffDate,
+      model,
+    });
 
     if (!pickUpDistrict || !pickUpLocation)
       return next(errorHandler(409, "pickup District and location needed"));
@@ -113,6 +143,8 @@ export const getVehiclesWithoutBooking = async (req, res, next) => {
       dropOffDate
     );
 
+    console.log("getVehiclesWithoutBooking - vehicles at date:", vehiclesAvailableAtDate?.length || 0);
+
     if (!vehiclesAvailableAtDate) {
       return res.status(404).json({
         success: false,
@@ -124,10 +156,12 @@ export const getVehiclesWithoutBooking = async (req, res, next) => {
       (cur) =>
         cur.district === pickUpDistrict &&
         cur.location == pickUpLocation &&
-        cur.isDeleted === "false"
+        cur.isDeleted === false
     );
 
-    if (!availableVehicles) {
+    console.log("getVehiclesWithoutBooking - filtered vehicles:", availableVehicles?.length || 0);
+
+    if (!availableVehicles || availableVehicles.length === 0) {
       return res.status(404).json({
         success: false,
         message: "No vehicles available at this location.",

@@ -82,7 +82,7 @@ function App() {
               element={<VendorDeleteVehicleModal />}
             />
             <Route
-              path="vendorDashboard/vendorAddProduct"
+              path="/vendorDashboard/vendorAddProduct"
               element={<VendorAddProductModal />}
             />
           </Route>

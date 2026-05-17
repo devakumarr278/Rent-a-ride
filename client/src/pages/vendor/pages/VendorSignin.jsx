@@ -48,6 +48,12 @@ function VendorSignin() {
         return;
       }
       if (data.isVendor) {
+        if (data.accessToken) {
+          localStorage.setItem("accessToken", data.accessToken);
+        }
+        if (data.refreshToken) {
+          localStorage.setItem("refreshToken", data.refreshToken);
+        }
         navigate("/vendorDashboard");
         dispatch(signInSuccess(data));
       }

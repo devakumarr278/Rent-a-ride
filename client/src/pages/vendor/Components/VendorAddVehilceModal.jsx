@@ -11,6 +11,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { MenuItem, } from "@mui/material";
 import { fetchModelData } from "../../admin/components/AddProductModal";
 import { useEffect } from "react";
+import { districtOptions, locationOptions } from "../../../constants/locationOptions";
 
 import Button from "@mui/material/Button";
 
@@ -29,7 +30,7 @@ const VendorAddProductModal = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { isAddVehicleClicked } = useSelector((state) => state.addVehicle);
-  const { modelData, companyData, locationData, districtData } = useSelector(
+  const { modelData, companyData } = useSelector(
     (state) => state.modelDataSlice
   );
   const { _id } = useSelector((state) => state.user.currentUser);
@@ -41,16 +42,22 @@ const VendorAddProductModal = () => {
 
   const onSubmit = async (addData) => {
     try {
-      const img = [];
-      for (let i = 0; i < addData.image.length; i++) {
-        img.push(addData.image[i]);
-      }
+      const BASE_URL = import.meta.env.VITE_PRODUCTION_BACKEND_URL || "http://localhost:3000";
       const formData = new FormData();
+      const appendFiles = (fieldName) => {
+        const files = addData[fieldName];
+        if (files && files.length) {
+          for (let i = 0; i < files.length; i++) {
+            formData.append(fieldName, files[i]);
+          }
+        }
+      };
       formData.append("registeration_number", addData.registeration_number);
       formData.append("company", addData.company);
-      img.forEach((file) => {
-        formData.append(`image`, file); // Append each file with a unique key
-      });
+      appendFiles("image");
+      appendFiles("insurance_image");
+      appendFiles("rc_book_image");
+      appendFiles("polution_image");
       formData.append("name", addData.name);
       formData.append("model", addData.model);
       formData.append("title", addData.title);
@@ -61,9 +68,9 @@ const VendorAddProductModal = () => {
       formData.append("fuel_type", addData.fuelType);
       formData.append("seat", addData.Seats);
       formData.append("transmition_type", addData.transmitionType);
-      formData.append("insurance_end_date", addData.insurance_end_date.$d);
-      formData.append("registeration_end_date", addData.Registeration_end_date.$d);
-      formData.append("polution_end_date", addData.polution_end_date.$d);
+      formData.append("insurance_end_date", addData.insurance_end_date?.$d || "");
+      formData.append("registeration_end_date", addData.Registeration_end_date?.$d || "");
+      formData.append("polution_end_date", addData.polution_end_date?.$d || "");
       formData.append("car_type", addData.carType);
       formData.append("location", addData.vehicleLocation);
       formData.append("district", addData.vehicleDistrict);
@@ -75,21 +82,35 @@ const VendorAddProductModal = () => {
         tostID = toast.loading("saving...", { position: "bottom-center" });
       }
 
-      const res = await fetch("/api/vendor/vendorAddVehicle", {
+      const accessToken = localStorage.getItem("accessToken") || "";
+
+      if (!accessToken) {
+        console.warn("Warning: accessToken missing in localStorage. Request may fail.");
+      }
+
+      const res = await fetch(`${BASE_URL}/api/vendor/vendorAddVehicle`, {
         method: "POST",
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
         body: formData,
       });
 
       if (!res.ok) {
-        toast.error("error");
+        let errMsg = "error";
+        try {
+          const json = await res.json();
+          errMsg = json.message || JSON.stringify(json);
+        } catch (e) {
+          try {
+            errMsg = await res.text();
+          } catch (e2) {}
+        }
+        toast.error(errMsg);
         toast.dismiss(tostID);
-      }
-      if (res.ok) {
-        toast.success("request send to admin");
-        toast.dismiss(tostID);
-        
+        return; // stop on error
       }
 
+      toast.success("request sent to admin");
+      toast.dismiss(tostID);
       reset();
     } catch (error) {
       console.log(error);
@@ -149,6 +170,7 @@ const VendorAddProductModal = () => {
                       id="company"
                       select
                       label="Company"
+                      value={field.value || ""}
                       error={Boolean(field.value == "")}
                     >
                       {companyData.map((cur, idx) => (
@@ -177,6 +199,7 @@ const VendorAddProductModal = () => {
                       id="model"
                       select
                       label="Model"
+                      value={field.value || ""}
                       error={Boolean(field.value == "")}
                     >
                       {modelData.map((cur, idx) => (
@@ -218,6 +241,7 @@ const VendorAddProductModal = () => {
                       id="fuel_type"
                       select
                       label="Fuel type"
+                      value={field.value || ""}
                       error={Boolean(field.value == "")}
                     >
                       <MenuItem value={"petrol"}>petrol</MenuItem>
@@ -240,6 +264,7 @@ const VendorAddProductModal = () => {
                       id="car_type"
                       select
                       label="Car Type"
+                      value={field.value || ""}
                       error={Boolean(field.value === "")} // Add error handling for empty value
                     >
                       <MenuItem value="sedan">Sedan</MenuItem>
@@ -259,6 +284,7 @@ const VendorAddProductModal = () => {
                       id="seats"
                       select
                       label="Seats"
+                      value={field.value || ""}
                       error={Boolean(field.value === "")}
                     >
                       <MenuItem value={"5"}>5</MenuItem>
@@ -278,6 +304,7 @@ const VendorAddProductModal = () => {
                       id="transmittion_type"
                       select
                       label="transmittion_type"
+                      value={field.value || ""}
                       error={Boolean(field.value == "")}
                     >
                       <MenuItem value={"automatic"}>automatic</MenuItem>
@@ -296,9 +323,10 @@ const VendorAddProductModal = () => {
                       id="vehicleLocation"
                       select
                       label="vehicleLocation"
+                      value={field.value || ""}
                       error={Boolean(field.value == "")}
                     >
-                      {locationData.map((cur, idx) => (
+                      {locationOptions.map((cur, idx) => (
                         <MenuItem value={cur} key={idx}>
                           {cur}
                         </MenuItem>
@@ -317,9 +345,10 @@ const VendorAddProductModal = () => {
                       id="vehicleDistrict"
                       select
                       label="vehicleDistrict"
+                      value={field.value || ""}
                       error={Boolean(field.value == "")}
                     >
-                      {districtData.map((cur, idx) => (
+                      {districtOptions.map((cur, idx) => (
                         <MenuItem value={cur} key={idx}>
                           {cur}
                         </MenuItem>

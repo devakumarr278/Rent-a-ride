@@ -51,7 +51,7 @@ const Vehicles = () => {
   const navigate = useNavigate();
   const [isLoading , setIsLoading] = useState(true)
 
-  const BASE_URL = import.meta.env.VITE_PRODUCTION_BACKEND_URL
+  const BASE_URL = import.meta.env.VITE_PRODUCTION_BACKEND_URL || "http://localhost:3000"
   //allVariants are set to null when we enter AllVehicles from navbar
 
   let refreshToken = localStorage.getItem('refreshToken')
@@ -102,7 +102,7 @@ const Vehicles = () => {
            (filterdData && filterdData.length > 0
             ? filterdData.map(
                 (cur, idx) =>
-                  cur.isDeleted === "false" &&
+                  cur.isDeleted === false &&
                   cur.isAdminApproved && (
                     <div
                       className="bg-white box-shadow rounded-lg  drop-shadow "
@@ -193,7 +193,7 @@ const Vehicles = () => {
             : userAllVehicles &&
               userAllVehicles.map(
                 (cur, idx) =>
-                  cur.isDeleted === "false" &&
+                  cur.isDeleted === false &&
                   cur.isAdminApproved && (
                     <div
                       className="bg-white box-shadow rounded-lg  drop-shadow "

@@ -1,6 +1,8 @@
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 import userRoute from "./routes/userRoute.js";
 import authRoute from "./routes/authRoute.js";
 import adminRoute from './routes/adminRoute.js'
@@ -9,34 +11,55 @@ import cors from 'cors'
 import cookieParser from "cookie-parser";
 import { cloudinaryConfig } from "./utils/cloudinaryConfig.js";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.join(__dirname, ".env") });
+const port = process.env.PORT || 3000;
+const mongoUri = process.env.mongo_uri || process.env.MONGO_URI;
 
 const App = express();
 
-
 App.use(express.json());
-App.use(cookieParser())
+App.use(cookieParser());
 
-
-dotenv.config();
-const port = 3000;
+if (!mongoUri) {
+  console.error("Missing mongo_uri in backend/.env");
+  process.exit(1);
+}
 
 mongoose
-  .connect(process.env.mongo_uri)
-  .then(console.log("connected"))
-  .catch((error) => console.error(error));
+  .connect(mongoUri)
+  .then(() => {
+    console.log("connected");
+    const server = App.listen(port, () => {
+      console.log(`server listening on port ${port}!`);
+    });
 
-  
+    server.on('error', (err) => {
+      if (err && err.code === 'EADDRINUSE') {
+        console.error(`Port ${port} is already in use. Kill the process using the port or set a different PORT in .env`);
+        process.exit(1);
+      }
+      console.error('Server error:', err);
+      process.exit(1);
+    });
+  })
+  .catch((error) => {
+    console.error("MongoDB connection failed:", error);
+    process.exit(1);
+  });
 
-App.listen(port, () => {
-  console.log("server listening !");
-});
-
-const allowedOrigins = ['https://rent-a-ride-two.vercel.app', 'http://localhost:5173']; // Add allowed origins here
+const allowedOrigins = [
+  'https://rent-a-ride-two.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:5174',
+]; // Add allowed origins here
 
 App.use(
   cors({
     origin: allowedOrigins,
-    methods:['GET', 'PUT', 'POST' ,'PATCH','DELETE'],
+    methods: ['GET', 'PUT', 'POST', 'PATCH', 'DELETE'],
     credentials: true, // Enables the Access-Control-Allow-Credentials header
   })
 );

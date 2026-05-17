@@ -20,6 +20,7 @@ const Navbar = () => {
   const {  chat, notification, userProfile, screenSize } = useSelector(
     (state) => state.adminDashboardSlice
   );
+  const username = useSelector((state) => state.user.currentUser?.username);
 
   useEffect(() => {
     const handleResize = () => dispatch(setScreenSize(window.innerWidth));
@@ -102,7 +103,7 @@ const Navbar = () => {
             <p>
               <span className="text-[12px] text-gray-400">Hi,</span>{" "}
               <span className="text-gray-400 font-semi-bold  text-[12px]">
-                Jeevan
+                {username || "Jeeva"}
               </span>
             </p>
             <MdKeyboardArrowDown />

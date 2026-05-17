@@ -8,11 +8,24 @@ import Vehicle from "../../models/vehicleModel.js";
 // vendor add vehicle
 export const vendorAddVehicle = async (req, res, next) => {
   try {
+    console.log("vendorAddVehicle invoked");
+    console.log("env cloud name:", process.env.CLOUD_NAME ? "present" : "missing");
+    console.log('body:', req.body);
+
+    const files = Array.isArray(req.files)
+      ? req.files
+      : req.files
+      ? Object.values(req.files).flat()
+      : [];
+
+    console.log('files:', files.length ? files.map((f) => f.originalname) : 'none');
+
     if (!req.body) {
-      return next(errorHandler(500, "body cannot be empty"));
+      return next(errorHandler(400, "body cannot be empty"));
     }
-    if (!req.files || req.files.length === 0) {
-      return next(errorHandler(500, "image cannot be empty"));
+
+    if (!files || files.length === 0) {
+      return next(errorHandler(400, "image cannot be empty"));
     }
 
     const {
@@ -39,74 +52,72 @@ export const vendorAddVehicle = async (req, res, next) => {
 
     const uploadedImages = [];
 
-    if (req.files) {
-      //converting the buffer to base64
-      const encodedFiles = base64Converter(req);
+    if (files) {
+      // converting the buffer to base64
+      const encodedFiles = base64Converter(files);
 
       try {
-        //mapping over encoded files and uploading to cloudinary
+        // mapping over encoded files and uploading to cloudinary
         await Promise.all(
           encodedFiles.map(async (cur) => {
-            try {
-              const result = await uploader.upload(cur.data, {
-                public_id: cur.filename,
-              });
-              uploadedImages.push(result.secure_url);
-            } catch (error) {
-              console.log(error, {
-                message: "error while uploading to cloudinary",
-              });
-            }
+            const result = await uploader.upload(cur.data, {
+              public_id: cur.filename,
+            });
+            uploadedImages.push(result.secure_url);
           })
         );
-        try {
-          if (uploadedImages.length > 0) {
-            const addVehicle = new vehicle({
-              registeration_number,
-              company,
-              name,
-              image: uploadedImages,
-              model,
-              car_title: title,
-              car_description: description,
-              base_package,
-              price,
-              year_made,
-              fuel_type,
-              seats: seat,
-              transmition: transmition_type,
-              insurance_end: insurance_end_date,
-              registeration_end: registeration_end_date,
-              pollution_end: polution_end_date,
-              car_type,
-              created_at: Date.now(),
-              location,
-              district,
-              isAdminAdded: "false",
-              addedBy: addedBy,
-              isAdminApproved: false,
-            });
-
-            await addVehicle.save();
-            res.status(200).json({
-              message: "product added to mb & cloudninary successfully",
-            });
-          }
-        } catch (error) {
-          if (error.code === 11000) {
-            return next(errorHandler(409, "product already exists"));
-          }
-
-          console.log(error);
-          next(errorHandler(500, "product not uploaded"));
-        }
       } catch (error) {
-        next(errorHandler(500, "could not upload image to cloudinary"));
+        console.error("cloudinary upload error:", error);
+        const message = error?.message || "could not upload image to cloudinary";
+        return next(errorHandler(502, message));
+      }
+
+      try {
+        if (uploadedImages.length > 0) {
+          const addVehicle = new vehicle({
+            registeration_number,
+            company,
+            name,
+            image: uploadedImages,
+            model,
+            car_title: title,
+            car_description: description,
+            base_package,
+            price,
+            year_made,
+            fuel_type,
+            seats: seat,
+            transmition: transmition_type,
+            insurance_end: insurance_end_date,
+            registeration_end: registeration_end_date,
+            pollution_end: polution_end_date,
+            car_type,
+            created_at: Date.now(),
+            location,
+            district,
+            isAdminAdded: false,
+            addedBy: addedBy,
+            isAdminApproved: false,
+          });
+
+          await addVehicle.save();
+          return res.status(200).json({
+            message: "product added to mb & cloudninary successfully",
+          });
+        }
+        return next(errorHandler(500, "no images uploaded"));
+      } catch (error) {
+        if (error.code === 11000) {
+          return next(errorHandler(409, "product already exists"));
+        }
+
+        console.error(error);
+        return next(errorHandler(500, "product not uploaded"));
       }
     }
   } catch (error) {
-    console.log(error)
-    next(errorHandler(400, "vehicle failed to add "));
+    console.error(error);
+    return next(errorHandler(400, "vehicle failed to add "));
   }
 };
 
@@ -205,7 +216,7 @@ export const vendorDeleteVehicles = async (req, res, next) => {
     const vehicle_id = req.params.id;
     const softDeleted = await vehicle.findOneAndUpdate(
       { _id: vehicle_id },
-      { isDeleted: "true" },
+      { isDeleted: true },
       { new: true }
     );
     if (!softDeleted) {
@@ -222,24 +233,26 @@ export const vendorDeleteVehicles = async (req, res, next) => {
 //show vendor vehicles
 export const showVendorVehicles = async (req, res, next) => {
   try {
-    if (!req.body) {
-      throw errorHandler(400, "User not found");
-    }
+    // Prefer the authenticated user id set by verifyToken middleware
+    const userId = (req.user && req.user.id) || (req.body && req.body._id);
 
-    const { _id } = req.body;
+    if (!userId) {
+      return next(errorHandler(401, "User not authenticated"));
+    }
 
     const vendorsVehicles = await vehicle.aggregate([
       {
         $match: {
-          isDeleted: "false",
+          isDeleted: false,
           isAdminAdded: false,
-          addedBy: _id,
+          addedBy: userId,
         },
       },
     ]);
 
+    // Return empty array when no vehicles found instead of throwing a 500
     if (!vendorsVehicles || vendorsVehicles.length === 0) {
-      throw errorHandler(400, "No vehicles found");
+      return res.status(200).json([]);
     }
 
     res.status(200).json(vendorsVehicles);

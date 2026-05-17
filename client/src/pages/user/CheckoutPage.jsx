@@ -11,17 +11,13 @@ import { FaIndianRupeeSign } from "react-icons/fa6";
 import TextField from "@mui/material/TextField";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { displayRazorpay } from "./Razorpay";
+import { displayRazorpay } from "./razorpayHelpers";
 import { setPageLoading } from "../../redux/user/userSlice";
 import { setisPaymentDone } from "../../redux/user/LatestBookingsSlice";
 import {toast, Toaster} from "sonner";
 // import { toast, Toaster } from "sonner";
 
-export async function sendBookingDetailsEmail(
-  toEmail,
-  bookingDetails,
-  dispatch
-) {
+async function sendBookingDetailsEmail(toEmail, bookingDetails, dispatch) {
   try {
     const sendEamil = await fetch("/api/user/sendBookingDetailsEamil", {
       method: "POST",
@@ -88,24 +84,28 @@ const CheckoutPage = () => {
   const singleVehicleDetail = useSelector(
     (state) => state.userListVehicles.singleVehicleDetail
   );
-  const { isPageLoading } = useSelector((state) => state.user);
   const dispatch = useDispatch();
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const { email, phoneNumber, adress } = currentUser;
+
+  useEffect(() => {
+    dispatch(setPageLoading(false));
+  }, [dispatch]);
   const { price } = singleVehicleDetail;
 
   const user_id = currentUser._id;
   const vehicle_id = singleVehicleDetail._id;
 
   const start = pickupDate?.humanReadable
-    ? new Date(pickupDate?.humanReadable)
+    ? new Date(pickupDate.humanReadable)
     : new Date();
-  const end = pickupDate?.humanReadable
-    ? new Date(dropoffDate?.humanReadable)
+  const end = dropoffDate?.humanReadable
+    ? new Date(dropoffDate.humanReadable)
     : new Date();
 
   const diffMilliseconds = end - start;
-  const Days = Math.round(diffMilliseconds / (1000 * 3600 * 24));
+  const Days = Math.max(0, Math.round(diffMilliseconds / (1000 * 3600 * 24)));
 
   //settting and checking coupon
   const [wrongCoupon, setWrongCoupon] = useState(false);
@@ -123,37 +123,44 @@ const CheckoutPage = () => {
   };
 
   //calculateing total price after coupon
-  let totalPrice = price * Days ? Days + 50 - discount : "";
+  let totalPrice = price && Days ? price * Days + 50 - discount : "";
   //handle place order data
   const handlePlaceOrder = async () => {
+    console.log("1. Place order clicked");
+    if (!totalPrice || totalPrice <= 0) {
+      toast.error("Invalid total price. Please check your booking dates.");
+      return;
+    }
+
     const orderData = {
       user_id,
       vehicle_id,
       totalPrice,
-      pickupDate: pickupDate.humanReadable,
-      dropoffDate: dropoffDate.humanReadable,
+      pickupDate: pickupDate?.humanReadable,
+      dropoffDate: dropoffDate?.humanReadable,
       pickup_district,
       pickup_location,
       dropoff_location,
     };
 
     try {
+      setIsProcessing(true);
       dispatch(setPageLoading(true));
       const displayRazorpayResponse = await displayRazorpay(
         orderData,
         navigate,
         dispatch
       );
+      console.log("1.1 displayRazorpayResponse", displayRazorpayResponse);
 
       if (!displayRazorpayResponse || !displayRazorpayResponse?.ok) {
-        dispatch(setPageLoading(false));
         toast.error(displayRazorpayResponse?.message);
       }
     } catch (error) {
       console.log(error);
+    } finally {
+      setIsProcessing(false);
       dispatch(setPageLoading(false));
-    }finally{
-      dispatch(setPageLoading(false))
     }
   };
 
@@ -475,7 +482,7 @@ const CheckoutPage = () => {
               </p>
             </div>
 
-            {isPageLoading ? (
+            {isProcessing ? (
               <button
                 className={`mt-4 mb-8 w-full rounded-md bg-gray-400 px-6 py-3 font-medium text-black`}
                 disabled
